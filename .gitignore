@@ -1,5 +1,6 @@
 # Android/Gradle build outputs
 .gradle/
+.gradle-user-home/
 .gradle-local/
 .tools/
 build/
@@ -7,10 +8,14 @@ build/
 
 # Local machine configuration
 local.properties
+.tmp/
 
 # IDE files
 .idea/
 *.iml
+
+# Native probe outputs
+native_tools/v4l2_probe
 
 # Logs and OS files
 *.log

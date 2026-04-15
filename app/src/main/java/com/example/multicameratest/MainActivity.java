@@ -39,6 +39,8 @@ public class MainActivity extends Activity {
     private static final int REQUEST_CAMERA_PERMISSION = 1001;
     private static final Size TARGET_SIZE = new Size(1920, 1080);
     private static final int TARGET_FPS = 60;
+    private static final String STATUS_RUNNING = "\u8fd0\u884c\u4e2d";
+    private static final String STATUS_NO_FRAMES = "\u5df2\u6253\u5f00\u4f46\u6ca1\u6709\u5e27";
 
     private CameraManager cameraManager;
     private HandlerThread cameraThread;
@@ -101,12 +103,12 @@ public class MainActivity extends Activity {
     @Override
     protected void onStop() {
         super.onStop();
-        stopTest("应用进入后台，已释放所有相机");
+        stopTest("应用进入后台，已释放所有相机。");
     }
 
     @Override
     protected void onDestroy() {
-        stopTest("应用销毁，已释放所有相机");
+        stopTest("应用销毁，已释放所有相机。");
         stopCameraThread();
         super.onDestroy();
     }
@@ -148,7 +150,7 @@ public class MainActivity extends Activity {
     }
 
     private void refreshCameraCards() {
-        stopTest("相机列表已刷新");
+        stopTest("相机列表已刷新。");
         if (!hasCameraPermission()) {
             setSummaryText("缺少 CAMERA 权限。");
             return;
@@ -181,7 +183,7 @@ public class MainActivity extends Activity {
             }
             updateSummary();
         } catch (CameraAccessException e) {
-            setSummaryText("读取相机列表失败: " + e.getMessage());
+            setSummaryText("鐠囪褰囬惄鍛婃簚閸掓銆冩径杈Е: " + e.getMessage());
         }
     }
 
@@ -215,7 +217,7 @@ public class MainActivity extends Activity {
             slot.fpsRanges = joinRanges(ranges);
             slot.targetRange = choose60FpsRange(ranges);
         } else {
-            slot.fpsRanges = "unknown";
+            slot.fpsRanges = "未知";
         }
 
         slot.supportsTarget = slot.supports1080p && slot.targetRange != null;
@@ -236,23 +238,23 @@ public class MainActivity extends Activity {
 
     private String facingToLabel(Integer facing) {
         if (facing == null) {
-            return "unknown";
+            return "未知";
         }
         if (facing == CameraCharacteristics.LENS_FACING_FRONT) {
-            return "front";
+            return "前置";
         }
         if (facing == CameraCharacteristics.LENS_FACING_BACK) {
-            return "back";
+            return "后置";
         }
         if (facing == CameraCharacteristics.LENS_FACING_EXTERNAL) {
-            return "external";
+            return "外接";
         }
-        return "other";
+        return "其他";
     }
 
     private String hardwareLevelToLabel(Integer level) {
         if (level == null) {
-            return "unknown";
+            return "未知";
         }
         switch (level) {
             case CameraCharacteristics.INFO_SUPPORTED_HARDWARE_LEVEL_LEGACY:
@@ -266,7 +268,7 @@ public class MainActivity extends Activity {
             case CameraCharacteristics.INFO_SUPPORTED_HARDWARE_LEVEL_EXTERNAL:
                 return "EXTERNAL";
             default:
-                return "unknown(" + level + ")";
+                return "未知(" + level + ")";
         }
     }
 
@@ -418,7 +420,7 @@ public class MainActivity extends Activity {
         for (CameraSlot slot : slots) {
             slot.selectedForTest = slot.supportsTarget && (!hasExternalCandidate || slot.external);
             if (!slot.selectedForTest && slot.supportsTarget) {
-                slot.status = hasExternalCandidate ? "已跳过（优先测试 external）" : "待测试";
+                slot.status = hasExternalCandidate ? "已跳过（优先测试外接相机）" : "待测试";
             } else if (slot.selectedForTest) {
                 slot.status = "等待打开";
             }
@@ -426,8 +428,8 @@ public class MainActivity extends Activity {
         }
 
         setSummaryText(hasExternalCandidate
-                ? "开始测试 external 相机的 1080p60 并发能力。"
-                : "未发现 external 相机，开始测试所有支持 1080p60 的相机。");
+                ? "开始测试外接相机的 1080p60 并发能力。"
+                : "未发现外接相机，开始测试所有支持 1080p60 的相机。");
 
         mainHandler.removeCallbacks(fpsTicker);
         mainHandler.postDelayed(fpsTicker, 1000);
@@ -536,7 +538,7 @@ public class MainActivity extends Activity {
                                                 slot.frameCounter++;
                                             }
                                 }, cameraHandler);
-                                slot.status = "运行中";
+                                slot.status = STATUS_RUNNING;
                                 slot.running = true;
                                 renderSlot(slot);
                             } catch (CameraAccessException e) {
@@ -644,7 +646,7 @@ public class MainActivity extends Activity {
         }
 
         String summary = String.format(Locale.US,
-                "发现 %d 路 Camera2，相机中 external=%d，支持 1080p60=%d。\n已纳入测试=%d，正在运行=%d，稳定 >=55fps=%d，失败/掉线=%d。",
+                "发现 %d 路 Camera2，相机中外接=%d，支持 1080p60=%d。\n已纳入测试=%d，正在运行=%d，稳定 >=55fps=%d，失败/掉线=%d。",
                 slots.size(), external, supported, selected, running, stable, failed);
         setSummaryText(summary);
     }
@@ -709,26 +711,31 @@ public class MainActivity extends Activity {
         void tickFps() {
             lastFps = frameCounter - lastFrameCounter;
             lastFrameCounter = frameCounter;
-            if (running && lastFps < 1f) {
-                status = "已打开但没有帧";
+            if (!running) {
+                return;
             }
+            if (lastFps < 1f) {
+                status = STATUS_NO_FRAMES;
+                return;
+            }
+            status = STATUS_RUNNING;
         }
 
         void render() {
             if (titleView == null || infoView == null || metricsView == null) {
                 return;
             }
-            titleView.setText(String.format(Locale.US, "Camera %s (%s)", cameraId, external ? "external" : facingLabel));
+            titleView.setText(String.format(Locale.US, "相机 %s（%s）", cameraId, external ? "外接" : facingLabel));
             infoView.setText(String.format(Locale.US,
-                    "硬件级别=%s\n支持1080p=%s\n可用FPS范围=%s\n预览尺寸=%s",
+                    "硬件级别=%s\n支持 1080p=%s\n可用 FPS 范围=%s\n预览尺寸=%s",
                     hardwareLevel,
-                    supports1080p ? "yes" : "no",
+                    supports1080p ? "是" : "否",
                     fpsRanges,
-                    previewSizes == null ? "unknown" : previewSizes));
+                    previewSizes == null ? "未知" : previewSizes));
             metricsView.setText(String.format(Locale.US,
-                    "状态: %s\n目标: 1920x1080 @ %s\n当前FPS: %.0f",
+                    "状态: %s\n目标: 1920x1080 @ %s\n当前 FPS: %.0f",
                     status,
-                    targetRange == null ? "N/A" : targetRange.getLower() + "-" + targetRange.getUpper(),
+                    targetRange == null ? "无" : targetRange.getLower() + "-" + targetRange.getUpper(),
                     lastFps));
             metricsView.setGravity(Gravity.START);
 
