@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">USB Camera Stress Test</string>
+    <string name="title_main">A201 多路 1080p60 摄像头测试</string>
+    <string name="subtitle_main">自动枚举 Camera2 设备，优先测试外接摄像头并统计同时稳定运行的路数。</string>
+    <string name="action_refresh">刷新列表</string>
+    <string name="action_start">开始测试</string>
+    <string name="action_stop">停止</string>
+    <string name="hint_text">判断标准建议：每路实际 FPS 持续接近 60，且没有出现断流、花屏或打开失败。打开成功但 FPS 明显低于 55 时，通常说明系统已接近瓶颈。</string>
+</resources>
